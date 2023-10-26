@@ -3,6 +3,9 @@ import { ChatGPTNotebookSerializer } from './ChatGPTNotebookSerializer';
 import { ChatGPTController } from './ChatGPTController';
 
 export function activate(context: vscode.ExtensionContext) {
+  // @ts-ignore
+  context.globalState.setKeysForSync(['apiKey', 'hasBeenOpenedBefore']);
+
   let hasBeenOpenedBefore = context.globalState.get('hasBeenOpenedBefore');
 
   if (!hasBeenOpenedBefore) {
