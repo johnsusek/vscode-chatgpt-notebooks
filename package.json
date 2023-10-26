@@ -2,7 +2,7 @@
   "name": "chatgpt-notebooks",
   "displayName": "ChatGPT Notebooks",
   "description": "Converse with ChatGPT using VSCode Notebooks.",
-  "version": "0.0.3",
+  "version": "0.1.1",
   "author": {
     "name": "John Susek"
   },

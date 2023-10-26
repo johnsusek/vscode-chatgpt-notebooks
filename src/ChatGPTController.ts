@@ -44,7 +44,9 @@ export class ChatGPTController implements vscode.Disposable {
     cells: vscode.NotebookCell[],
     notebook: vscode.NotebookDocument
   ) {
-    this.executeCell(cells[cells.length - 1], notebook);
+    for (let cell of cells) {
+      this.executeCell(cell, notebook);
+    }
     this.checkWordThreshold();
   }
 
@@ -63,6 +65,9 @@ export class ChatGPTController implements vscode.Disposable {
     }
   }
 
+  private getText(raw: Uint8Array) {
+    return (new TextDecoder().decode(raw));
+  }
 
   private async executeCell(cell: vscode.NotebookCell, notebook: vscode.NotebookDocument): Promise<void> {
     let execution = this.controller.createNotebookCellExecution(cell);
@@ -83,14 +88,28 @@ export class ChatGPTController implements vscode.Disposable {
     }
 
     let cellIndex = notebook.getCells().indexOf(cell);
+    let cells = notebook.getCells();
+    let conversationHistory = [];
 
-    let conversationHistory = notebook.getCells().slice(0, cellIndex + 1).map(c => ({
-      role: c.kind === vscode.NotebookCellKind.Code ? 'user' : 'assistant',
-      content: c.document.getText()
-    }));
+    for (let idx = 0; idx <= cellIndex; idx++) {
+      let cell = cells[idx];
+      let resp = cell.outputs.map(o => o.items.map(item => this.getText(item.data)).join('')).join('');
+
+      conversationHistory.push({
+        role: 'user',
+        content: cell.document.getText()
+      })
+
+      conversationHistory.push({
+        role: 'assistant',
+        content: resp
+      })
+    }
 
     let partialOutput = '';
     let abortController = new AbortController();
+
+    console.log('Fetching completions...', conversationHistory);
 
     try {
       let response = await fetch(`https://api.openai.com/v1/chat/completions`, {
@@ -179,7 +198,7 @@ export class ChatGPTController implements vscode.Disposable {
       for (let output of cell.outputs) {
         for (let item of output.items) {
           if (item.mime === 'text/plain' || item.mime === 'text/markdown') {
-            totalWords += (new TextDecoder().decode(item.data)).length;
+            totalWords += this.getText(item.data).length;
           }
         }
       }
