@@ -10,10 +10,13 @@ export class ChatGPTController implements vscode.Disposable {
   private shouldAbort = false;
   private autoSave: boolean;
   private apiKey: string;
+  private characterThreshold: number;
 
   constructor(context: vscode.ExtensionContext, storedApiKey?: string) {
     this.context = context;
     this.apiKey = storedApiKey;
+
+    this.characterThreshold = vscode.workspace.getConfiguration('chatGPT').get('characterThreshold', 1000);
 
     this.controller = vscode.notebooks.createNotebookController(
       this.controllerId,
@@ -41,9 +44,8 @@ export class ChatGPTController implements vscode.Disposable {
     cells: vscode.NotebookCell[],
     notebook: vscode.NotebookDocument
   ) {
-    for (let cell of cells) {
-      this.executeCell(cell, notebook);
-    }
+    this.executeCell(cells[cells.length - 1], notebook);
+    this.checkWordThreshold();
   }
 
   private async promptForApiKey() {
@@ -161,6 +163,30 @@ export class ChatGPTController implements vscode.Disposable {
       }
 
       execution.end(false, Date.now());
+    }
+  }
+
+  private checkWordThreshold() {
+    let activeEditor = vscode.window.activeNotebookEditor;
+    if (!activeEditor) return;
+
+    let notebook = activeEditor.notebook;
+    let totalWords = 0;
+
+    for (let cell of notebook.getCells()) {
+      totalWords += cell.document.getText().length;
+
+      for (let output of cell.outputs) {
+        for (let item of output.items) {
+          if (item.mime === 'text/plain' || item.mime === 'text/markdown') {
+            totalWords += (new TextDecoder().decode(item.data)).length;
+          }
+        }
+      }
+    }
+
+    if (totalWords > this.characterThreshold) {
+      vscode.window.showWarningMessage(`Notebook over ${this.characterThreshold} characters may result in poor results and large requests. Consider starting a new conversation.`);
     }
   }
 }

@@ -29,6 +29,11 @@
     "configuration": {
       "title": "ChatGPT Notebooks",
       "properties": {
+        "chatGPT.characterThreshold": {
+          "type": "number",
+          "default": 100000,
+          "description": "Character length warning threshold"
+        },
         "chatGPT.selectedModel": {
           "type": "string",
           "default": "gpt-4",
