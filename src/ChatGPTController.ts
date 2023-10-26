@@ -7,6 +7,8 @@ export class ChatGPTController implements vscode.Disposable {
   readonly supportedLanguages = ['markdown'];
   private readonly context: vscode.ExtensionContext;
   private readonly controller: vscode.NotebookController;
+  private shouldAbort = false;
+  private autoSave: boolean;
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
@@ -17,9 +19,16 @@ export class ChatGPTController implements vscode.Disposable {
       this.label
     );
 
+    this.autoSave = vscode.workspace.getConfiguration('chatGPT').get('autoSave', true);
+
     this.controller.supportedLanguages = this.supportedLanguages;
     this.controller.supportsExecutionOrder = false;
     this.controller.executeHandler = this.execute.bind(this);
+    this.controller.interruptHandler = this.interrupt.bind(this);
+  }
+
+  private interrupt() {
+    this.shouldAbort = true;
   }
 
   dispose() {
@@ -56,6 +65,7 @@ export class ChatGPTController implements vscode.Disposable {
     }));
 
     let partialOutput = '';
+    let abortController = new AbortController();
 
     try {
       let response = await fetch(`https://api.openai.com/v1/chat/completions`, {
@@ -68,7 +78,8 @@ export class ChatGPTController implements vscode.Disposable {
           model: model,
           messages: conversationHistory,
           stream: true
-        })
+        }),
+        signal: abortController.signal
       });
 
       if (!response.body) {
@@ -81,6 +92,7 @@ export class ChatGPTController implements vscode.Disposable {
       let decoder = new TextDecoder("utf-8");
 
       while (true) {
+        if (this.shouldAbort) abortController.abort();
         let { done, value } = await reader.read();
         if (done) {
           break;
@@ -100,7 +112,6 @@ export class ChatGPTController implements vscode.Disposable {
 
           if (content) {
             partialOutput += content;
-            console.log('got content', content);
 
             execution.replaceOutput([
               new vscode.NotebookCellOutput([
@@ -113,12 +124,14 @@ export class ChatGPTController implements vscode.Disposable {
 
       execution.end(true, Date.now());
 
-      let autoSave = vscode.workspace.getConfiguration('chatGPT').get('autoSave', true);
-      if (autoSave) await vscode.workspace.saveAll();
+      if (this.autoSave) await vscode.workspace.saveAll();
     } catch (error) {
-      debugger;
-      if (error.response?.data?.error) {
-        vscode.window.showErrorMessage(error.response?.data.error);
+      if (error.name === 'AbortError') {
+        if (this.autoSave) await vscode.workspace.saveAll();
+        execution.end(true, Date.now());
+      }
+      else if (error.response?.data?.error?.message) {
+        vscode.window.showErrorMessage(error.response?.data.error.message);
       }
       else {
         vscode.window.showErrorMessage('Error communicating with ChatGPT: ' + error.message);

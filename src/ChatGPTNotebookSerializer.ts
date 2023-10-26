@@ -21,7 +21,11 @@ export class ChatGPTNotebookSerializer implements vscode.NotebookSerializer {
       if (contents.length) {
         vscode.window.showErrorMessage('Error parsing notebook content: ' + e.message);
       }
-      return new vscode.NotebookData([]);
+
+      this.focusLast();
+      setTimeout(() => { this.focusLast(); }, 200);
+
+      return new vscode.NotebookData([new vscode.NotebookCellData(vscode.NotebookCellKind.Code, '', 'markdown')]);
     }
 
     let cells = raw.cells.map(item => {
@@ -46,6 +50,11 @@ export class ChatGPTNotebookSerializer implements vscode.NotebookSerializer {
     let data = new vscode.NotebookData(cells);
 
     return data;
+  }
+
+  private focusLast() {
+    vscode.commands.executeCommand('notebook.focusBottom');
+    vscode.commands.executeCommand('notebook.cell.edit');
   }
 
   async serializeNotebook(data: vscode.NotebookData): Promise<Uint8Array> {
