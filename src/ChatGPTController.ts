@@ -100,16 +100,17 @@ export class ChatGPTController implements vscode.Disposable {
         content: cell.document.getText()
       })
 
-      conversationHistory.push({
-        role: 'assistant',
-        content: resp
-      })
+      if (idx !== cellIndex) {
+        // Don't sent the response to the last cell (overwrite it)
+        conversationHistory.push({
+          role: 'assistant',
+          content: resp
+        })
+      }
     }
 
     let partialOutput = '';
     let abortController = new AbortController();
-
-    console.log('Fetching completions...', conversationHistory);
 
     try {
       let response = await fetch(`https://api.openai.com/v1/chat/completions`, {
