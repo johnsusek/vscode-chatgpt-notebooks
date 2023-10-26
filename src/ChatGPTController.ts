@@ -9,9 +9,11 @@ export class ChatGPTController implements vscode.Disposable {
   private readonly controller: vscode.NotebookController;
   private shouldAbort = false;
   private autoSave: boolean;
+  private apiKey: string;
 
-  constructor(context: vscode.ExtensionContext) {
+  constructor(context: vscode.ExtensionContext, storedApiKey?: string) {
     this.context = context;
+    this.apiKey = storedApiKey;
 
     this.controller = vscode.notebooks.createNotebookController(
       this.controllerId,
@@ -44,17 +46,38 @@ export class ChatGPTController implements vscode.Disposable {
     }
   }
 
+  private async promptForApiKey() {
+    let apiKey = await vscode.window.showInputBox({
+      placeHolder: 'Enter your OpenAI API Key',
+      prompt: 'API Key is required to interact with ChatGPT',
+      ignoreFocusOut: true
+    });
+
+    if (apiKey) {
+      await this.context.globalState.update('apiKey', apiKey);
+      vscode.window.showInformationMessage('API Key stored successfully.');
+    } else {
+      vscode.window.showErrorMessage('API Key is required for this extension to work.');
+    }
+  }
+
+
   private async executeCell(cell: vscode.NotebookCell, notebook: vscode.NotebookDocument): Promise<void> {
     let execution = this.controller.createNotebookCellExecution(cell);
     execution.start(Date.now());
 
     let model = vscode.workspace.getConfiguration('chatGPT').get('selectedModel', 'gpt-4');
-    let apiKey = this.context.globalState.get<string>('apiKey');
+    let apiKey = this.apiKey || this.context.globalState.get<string>('apiKey');
 
     if (!apiKey) {
-      vscode.window.showErrorMessage('API key not set. Please set your API key.');
-      execution.end(false, Date.now());
-      return;
+      await this.promptForApiKey();
+      apiKey = this.context.globalState.get<string>('apiKey');
+      if (!apiKey) {
+        vscode.window.showErrorMessage('API key not set. Please set your API key.');
+        execution.end(false, Date.now());
+        return;
+      }
+      this.apiKey = apiKey;
     }
 
     let cellIndex = notebook.getCells().indexOf(cell);

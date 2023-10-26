@@ -12,9 +12,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   let storedApiKey = context.globalState.get<string>('apiKey');
 
-  if (!storedApiKey) promptForApiKey(context);
-
-  context.subscriptions.push(new ChatGPTController(context));
+  context.subscriptions.push(new ChatGPTController(context, storedApiKey));
 
   context.subscriptions.push(
     vscode.workspace.registerNotebookSerializer('chatgpt-notebook', new ChatGPTNotebookSerializer())
@@ -43,19 +41,3 @@ function registerModelPicker(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(selectModelCmd);
 }
-
-async function promptForApiKey(context: vscode.ExtensionContext) {
-  let apiKey = await vscode.window.showInputBox({
-    placeHolder: 'Enter your OpenAI API Key',
-    prompt: 'API Key is required to interact with ChatGPT',
-    ignoreFocusOut: true
-  });
-
-  if (apiKey) {
-    await context.globalState.update('apiKey', apiKey);
-    vscode.window.showInformationMessage('API Key stored successfully.');
-  } else {
-    vscode.window.showErrorMessage('API Key is required for this extension to work.');
-  }
-}
-
