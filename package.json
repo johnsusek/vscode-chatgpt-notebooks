@@ -2,7 +2,7 @@
   "name": "chatgpt-notebooks",
   "displayName": "ChatGPT Notebooks",
   "description": "Unofficial ChatGPT Notebook Kernel",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "author": {
     "name": "John Susek"
   },
@@ -67,7 +67,7 @@
     "postinstall": "node ./node_modules/vscode/bin/install"
   },
   "devDependencies": {
-    "@types/vscode": "^1.1.0",
+    "@types/vscode": "^1.83.1",
     "tslint": "^6.1.3",
     "typescript": "^5.2.2",
     "vscode": "^1.1.37"

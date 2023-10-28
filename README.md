@@ -2,6 +2,7 @@
 
 Welcome to the unofficial ChatGPT engine for VSCode Notebooks!
 
+* Create a `.chatgpt` file to get started
 * Use "Code" cells to enter your prompts.
 * The execute cell function will send the conversation up to that point to the OpenAI API.
 * You can choose your model in settings (default GPT-4).
